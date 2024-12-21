@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Converter"
+             x:Class="Converter.MainPage">
+
+    <ContentPage.BindingContext>
+        <vm:ViewModelConverter />
+    </ContentPage.BindingContext>
+
+    <ScrollView BackgroundColor="Black">
+        <VerticalStackLayout
+            HorizontalOptions="Start"
+            Padding="30,0"
+            Spacing="25"
+            Margin="50">
+
+            <VerticalStackLayout Spacing="30">
+                <FlexLayout MaximumWidthRequest="500">
+                    <Picker WidthRequest="300"
+                                ItemsSource="{Binding Currencies}"
+                                SelectedItem="{Binding FromMoney}"
+                                IsEnabled="{Binding Ready}" />
+                    <Entry WidthRequest="150"
+                                HorizontalTextAlignment="End"
+                                Keyboard="Numeric"
+                                Text="{Binding MoneyAmount}" 
+                                IsEnabled="{Binding Ready}" />
+                </FlexLayout>
+
+                <FlexLayout MaximumWidthRequest="500">
+                    <Picker WidthRequest="300"
+                                ItemsSource="{Binding Currencies}" 
+                                SelectedItem="{Binding ToMoney}"
+                                IsEnabled="{Binding Ready}" />
+                    <Entry WidthRequest="150"
+                                HorizontalTextAlignment="End"
+                                IsReadOnly="True"
+                                Text="{Binding ResultMoney}"
+                                IsEnabled="{Binding Ready}" />
+                </FlexLayout>
+
+                <DatePicker HorizontalOptions="Start"
+                    MinimumDate="01/01/2000"
+                    x:Name="DateSelector"
+                    Date="{Binding PickedDate}"
+                    IsEnabled="{Binding Ready}" />
+
+            </VerticalStackLayout>
+            <ActivityIndicator IsRunning="True" IsVisible="{Binding Loading}" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
