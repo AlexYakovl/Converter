@@ -5,12 +5,24 @@ using ConverterAPI;
 
 namespace Converter
 {
+    public class Currency
+    {
+        public string Code { get; set; }
+        public string Name { get; set; }
+        public decimal Rate { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Name} ({Code})";
+        }
+    }
+
     internal class ViewModelConverter : INotifyPropertyChanged
     {
         private readonly API api;
         private RatesJson ratesData;
         private Dictionary<string, Valute> rates;
-        public ObservableCollection<string> Currencies { get; private set; }
+        public ObservableCollection<Currency> Currencies { get; private set; }
 
         private bool loading = false;
         public bool Loading
@@ -27,10 +39,7 @@ namespace Converter
             }
         }
 
-        public bool Ready
-        {
-            get => !loading;
-        }
+        public bool Ready => !loading;
 
         private DateTime pickedDate = DateTime.Today;
         public DateTime PickedDate
@@ -47,8 +56,8 @@ namespace Converter
             }
         }
 
-        private string fromMoney = "";
-        public string FromMoney
+        private Currency fromMoney;
+        public Currency FromMoney
         {
             get => fromMoney;
             set
@@ -62,8 +71,8 @@ namespace Converter
             }
         }
 
-        private string toMoney = "";
-        public string ToMoney
+        private Currency toMoney;
+        public Currency ToMoney
         {
             get => toMoney;
             set
@@ -109,7 +118,7 @@ namespace Converter
         public ViewModelConverter()
         {
             api = new API();
-            Currencies = [];
+            Currencies = new ObservableCollection<Currency>();
             GetNewRates();
         }
 
@@ -119,8 +128,9 @@ namespace Converter
             {
                 Loading = true;
 
-                string oldFromMoney = FromMoney;
-                string oldToMoney = ToMoney;
+                string oldFromCurrencyCode = FromMoney?.Code;
+                string oldToCurrencyCode = ToMoney?.Code;
+                string oldMoneyAmount = MoneyAmount;
 
                 ratesData = await api.CallAPI(pickedDate);
                 rates = ratesData.Rates;
@@ -128,21 +138,23 @@ namespace Converter
                 Currencies.Clear();
                 foreach (var money in rates)
                 {
-                    Currencies.Add($"{money.Value.Name} ({money.Key})");
+                    Currencies.Add(new Currency
+                    {
+                        Code = money.Key,
+                        Name = money.Value.Name,
+                        Rate = (decimal)money.Value.Value
+                    });
                 }
 
-                if (!string.IsNullOrEmpty(oldFromMoney))
-                    FromMoney = Currencies.FirstOrDefault(x => x == oldFromMoney);
-                else
-                    FromMoney = Currencies.FirstOrDefault();
+                FromMoney = Currencies.FirstOrDefault(c => c.Code == oldFromCurrencyCode) ?? Currencies.FirstOrDefault();
 
-                if (!string.IsNullOrEmpty(oldToMoney))
-                    ToMoney = Currencies.FirstOrDefault(x => x == oldToMoney);
-                else
-                    ToMoney = Currencies.FirstOrDefault();
+                ToMoney = Currencies.FirstOrDefault(c => c.Code == oldToCurrencyCode) ?? Currencies.FirstOrDefault();
+
+                MoneyAmount = oldMoneyAmount;
 
                 PickedDate = ratesData.Date;
                 Loading = false;
+
                 DoConversion();
             }
             catch (Exception ex)
@@ -151,34 +163,20 @@ namespace Converter
             }
         }
 
-        private static string GetMoneyCode(string moneyName)
-        {
-            return moneyName.Split('(', ')')[^2];
-        }
 
         private void DoConversion()
         {
-            if (Double.TryParse(MoneyAmount, out double amount) &&
-                !string.IsNullOrEmpty(FromMoney) &&
-                !string.IsNullOrEmpty(ToMoney) &&
-                !string.IsNullOrEmpty(MoneyAmount) &&
+            if (decimal.TryParse(MoneyAmount, out decimal amount) &&
+                FromMoney != null &&
+                ToMoney != null &&
                 rates != null)
             {
-                string fromCode = GetMoneyCode(FromMoney);
-                string toCode = GetMoneyCode(ToMoney);
+                double result = API.ConvertCurrencies(
+                    rates[FromMoney.Code],
+                    rates[ToMoney.Code],
+                    (double)amount);
 
-                if (rates.ContainsKey(fromCode) && rates.ContainsKey(toCode))
-                {
-                    Valute from = rates[fromCode];
-                    Valute to = rates[toCode];
-
-                    double result = API.ConvertCurrencies(from, to, amount);
-                    ResultMoney = result.ToString("F2");
-                }
-                else
-                {
-                    ResultMoney = string.Empty;
-                }
+                ResultMoney = result.ToString("F2");
             }
             else
             {
